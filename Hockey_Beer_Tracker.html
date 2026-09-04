@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Hockey Beer Tracker</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#17202a;background:#f2f4f7}
+*{box-sizing:border-box}body{margin:0;padding-bottom:82px}.top{background:#111827;color:white;padding:calc(18px + env(safe-area-inset-top)) 16px 16px;position:sticky;top:0;z-index:5}.top h1{margin:0;font-size:23px}.top p{margin:4px 0 0;color:#cbd5e1;font-size:13px}
+main{max-width:700px;margin:auto;padding:14px}.card{background:white;border-radius:16px;padding:15px;margin-bottom:12px;box-shadow:0 1px 4px #0001}.game{border:1px solid #e5e7eb}.gamehead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.gamehead strong{font-size:17px}.tag{font-size:12px;background:#eef2ff;border-radius:20px;padding:5px 8px}.beer{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid #eee;padding:11px 0 0;margin-top:9px}.beer:first-of-type{border-top:0;padding-top:0;margin-top:0}.name{font-weight:600}.done{border:0;border-radius:12px;padding:10px 12px;font-weight:700;background:#e5e7eb;color:#374151}.done.on{background:#16a34a;color:white}.select{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:10px;background:white;font-size:15px;margin:5px 0 10px}.nav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid #ddd;display:flex;justify-content:space-around;padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:10}.nav button{border:0;background:none;font-size:12px;color:#6b7280;padding:4px}.nav button.active{color:#111827;font-weight:800}.nav span{display:block;font-size:20px;margin-bottom:2px}.bar{height:10px;background:#e5e7eb;border-radius:10px;overflow:hidden}.fill{height:100%;background:#16a34a}.stat{font-size:30px;font-weight:800}.muted{color:#6b7280;font-size:13px}.danger{background:#fee2e2;color:#991b1b;border:0;border-radius:10px;padding:10px 12px;font-weight:700}.primary{background:#111827;color:white;border:0;border-radius:10px;padding:11px 14px;font-weight:700;width:100%}.hidden{display:none}.playerrow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eee}.playerrow:last-child{border-bottom:0}.pill{padding:5px 9px;border-radius:20px;background:#f3f4f6;font-weight:700;font-size:13px}.pill.good{background:#dcfce7;color:#166534}
+</style>
+</head>
+<body>
+<header class="top"><h1>🏒 Hockey Beer Tracker</h1><p>20 players • 32 games • 2 boxes each</p></header>
+<main id="app"></main>
+<nav class="nav">
+<button data-tab="schedule" class="active"><span>🏒</span>Schedule</button>
+<button data-tab="players"><span>👥</span>Players</button>
+<button data-tab="reassign"><span>🔄</span>Reassign</button>
+<button data-tab="season"><span>📊</span>Season</button>
+</nav>
+<script>
+const players=["Nate","Hammy","Carson","Tim","Shak","Weslee","Bryce","Nash","Zane","Jordan","Tyler","Gui","Jake","Spencer","Shawn","Grover","Matt","Dain","Connor","Minchin"];
+const base=[["Nate","Hammy"],["Carson","Tim"],["Shak","Weslee"],["Bryce","Nash"],["Zane","Jordan"],["Tyler","Gui"],["Jake","Spencer"],["Shawn","Grover"],["Matt"],["Dain"],["Connor"],["Minchin"],["Nate"],["Hammy"],["Carson"],["Tim"],["Shak"],["Weslee"],["Bryce"],["Nash"],["Zane"],["Jordan"],["Tyler"],["Gui"],["Jake"],["Spencer"],["Shawn"],["Grover"],["Matt"],["Dain"],["Connor"],["Minchin"]];
+let state=JSON.parse(localStorage.getItem("hockeyBeerTracker")||'{"done":{},"changes":{}}');
+let tab="schedule";
+function save(){localStorage.setItem("hockeyBeerTracker",JSON.stringify(state))}
+function effective(g){
+ return (base[g]||[]).map((p,i)=>state.changes[g+"|"+i]?.to||p)
+}
+function completed(p){
+ let n=0;
+ for(let g=0;g<32;g++) effective(g).forEach((x,i)=>{if(x===p&&state.done[g+"|"+i])n++});
+ return n;
+}
+function render(){
+ const a=document.getElementById("app");
+ if(tab==="schedule") a.innerHTML=schedule();
+ if(tab==="players") a.innerHTML=playersPage();
+ if(tab==="reassign") a.innerHTML=reassign();
+ if(tab==="season") a.innerHTML=season();
+}
+function schedule(){
+ return '<div class="card"><b>Tap “Mark brought” when the beer is delivered.</b><div class="muted">Each player is responsible for 2 boxes this season.</div></div>'+
+ base.map((_,g)=>{let e=effective(g);return `<div class="card game"><div class="gamehead"><strong>Game ${g+1}</strong><span class="tag">${e.length} ${e.length===1?'box':'boxes'}</span></div>`+
+ e.map((p,i)=>`<div class="beer"><div><div class="name">🍺 ${p}</div>${state.changes[g+"|"+i]?'<div class="muted">Reassigned</div>':''}</div><button class="done ${state.done[g+"|"+i]?'on':''}" onclick="toggleDone(${g},${i})">${state.done[g+"|"+i]?'✓ Brought':'Mark brought'}</button></div>`).join("")+'</div>'}).join("");
+}
+function playersPage(){
+ return '<div class="card"><h2 style="margin-top:0">👥 Player progress</h2><div class="muted">Goal: 2 boxes per player</div></div>'+
+ players.map(p=>{let n=completed(p);return `<div class="card playerrow"><div><b>${p}</b><div class="muted">${n===2?'Season complete':(2-n)+' box'+(2-n===1?'':'es')+' remaining'}</div></div><span class="pill ${n===2?'good':''}">${n}/2</span></div>`}).join("");
+}
+function reassign(){
+ let opts=players.map(p=>`<option value="${p}">${p} (${completed(p)}/2)</option>`).join("");
+ let games=base.map((arr,g)=>`<div class="card"><b>Game ${g+1}</b><select class="select" id="from${g}">${arr.map((p,i)=>`<option value="${i}">${p} — beer #${i+1}</option>`).join("")}</select><select class="select" id="to${g}"><option value="">Choose replacement…</option>${opts}</select><button class="primary" onclick="reassignGame(${g})">Save replacement</button></div>`).join("");
+ return '<div class="card"><h2 style="margin-top:0">🔄 Reassign a beer</h2><div class="muted">If someone can’t make a game, choose that beer and a replacement. Players with fewer completed boxes are shown first by their progress.</div></div>'+games;
+}
+function season(){
+ let total=players.reduce((s,p)=>s+completed(p),0), pct=Math.round(total/40*100);
+ return `<div class="card"><div class="stat">${total}/40</div><div><b>boxes brought</b></div><div class="bar" style="margin:14px 0"><div class="fill" style="width:${pct}%"></div></div><div class="muted">${40-total} boxes remaining • ${pct}% complete</div></div>
+ <div class="card"><h3 style="margin-top:0">Season goal</h3><p>20 players × 2 boxes = <b>40 boxes</b>.</p><p class="muted">There are 32 games, so 8 games have two beer duties and 24 games have one.</p><button class="danger" onclick="resetAll()">Reset all progress</button></div>`;
+}
+function toggleDone(g,i){let k=g+"|"+i;state.done[k]=!state.done[k];save();render()}
+function reassignGame(g){
+ let i=document.getElementById("from"+g).value, to=document.getElementById("to"+g).value;
+ if(!to){alert("Choose a replacement.");return}
+ state.changes[g+"|"+i]={to}; delete state.done[g+"|"+i]; save(); alert("Replacement saved."); render()
+}
+function resetAll(){if(confirm("Reset all brought marks and reassignments?")){state={done:{},changes:{}};save();render()}}
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{tab=b.dataset.tab;document.querySelectorAll(".nav button").forEach(x=>x.classList.toggle("active",x===b));render()});
+render();
+</script>
+</body>
+</html>
